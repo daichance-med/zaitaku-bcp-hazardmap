@@ -10,10 +10,17 @@ All Rights Reserved.
 本ソフトウェアおよび関連ドキュメントファイル（以下「本ソフトウェア」）は、
 著作権法により保護されています。
 
+【使用許可】
 個人・法人を問わず、以下の条件の下で使用を許可します：
-・商用・非商用問わず、自由に使用できます
-・改変・再配布も可能です
-・ただし、著作権表示の削除は禁止します
+・業務での使用OK（訪問看護、訪問診療、訪問介護等）
+・個人利用OK
+・改変・カスタマイズOK
+・無料での再配布OK
+
+【禁止事項】
+・本アプリの販売（有料配布）
+・本アプリを使った有料サービスの提供
+・著作権表示の削除
 
 免責事項：
 本ソフトウェアは「現状のまま」提供されます。
@@ -560,8 +567,8 @@ All Rights Reserved.
             <ul style="line-height: 1.8; color: #34495e;">
                 <li>本アプリは<strong>ブラウザ上で完結</strong>し、データを外部サーバーに送信しません</li>
                 <li>患者情報の管理責任は<strong>ユーザー（事業所）</strong>にあります</li>
-                <li>地図作成後、アップロードしたファイルは<strong>必ず削除</strong>してください</li>
-                <li>ファイルの削除、暗号化、アクセス制限等は<strong>ユーザーの責任</strong>です</li>
+                <li>地図作成後、アップロードしたファイルは<strong>安全に保管</strong>してください</li>
+                <li>ファイルの暗号化、アクセス制限等は<strong>ユーザーの責任</strong>です</li>
             </ul>
             
             <h3 style="color: #e74c3c; font-size: 18px; margin-top: 25px;">【セキュリティ上の注意】</h3>
@@ -603,6 +610,9 @@ All Rights Reserved.
                 <h1>🗺️ 在宅BCPハザードマップ</h1>
                 <p class="subtitle">患者住所とハザードマップを自動で統合</p>
                 <span class="version">v2.2.6</span>
+                <p style="margin-top: 15px; padding: 10px 20px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; font-size: 0.9em; color: #555;">
+                    💡 完全無料・拡散歓迎｜同僚・友人への紹介、SNSシェア大歓迎です
+                </p>
             </div>
             
             <div class="upload-area" id="uploadArea">
@@ -656,8 +666,9 @@ All Rights Reserved.
         </button>
         
         <!-- 著作権表示 -->
-        <div style="position: fixed; bottom: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 8px 12px; border-radius: 6px; font-size: 11px; color: #666; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            © 2026 福井　大治郎 All Rights Reserved.
+        <div style="position: fixed; top: 190px; left: 10px; background: rgba(255,255,255,0.9); padding: 6px 10px; border-radius: 6px; font-size: 10px; color: #666; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            © 2026 福井　大治郎<br>
+            <a href="https://github.com/daichance-med/zaitaku-bcp-hazardmap" target="_blank" style="color: #667eea; text-decoration: none; font-size: 10px;">GitHub</a>
         </div>
     </div>
     
@@ -1296,13 +1307,30 @@ All Rights Reserved.
                     }
                 }
                 
+                // リスク分類の正規化関数
+                function normalizeRiskLevel(value) {
+                    if (!value) return '低';
+                    
+                    const str = String(value).trim().toLowerCase();
+                    
+                    // 高リスク
+                    if (str.match(/^(高|重|赤|red|h|3|★★★|danger|high)$/)) {
+                        return '高';
+                    }
+                    
+                    // 中リスク
+                    if (str.match(/^(中|黄|yellow|m|2|★★|warning|medium|mid)$/)) {
+                        return '中';
+                    }
+                    
+                    // 低リスク（デフォルト）
+                    return '低';
+                }
+                
                 // リスク分類
                 let riskLevel = '低';
                 if (riskCol && row[riskCol]) {
-                    riskLevel = String(row[riskCol]).trim();
-                    if (!['高', '中', '低'].includes(riskLevel)) {
-                        riskLevel = '低';
-                    }
+                    riskLevel = normalizeRiskLevel(row[riskCol]);
                 }
                 
                 // 備考
@@ -1411,7 +1439,7 @@ All Rights Reserved.
                 <div class="risk-item risk-low">🟢 低<br><strong>${stats.low_risk}</strong></div>
             `;
             
-            // 【重要】元データを即座に削除
+            // 【重要】メモリからデータをクリア
             jsonData = null;
             workbook = null;
             data = null;
@@ -1639,11 +1667,12 @@ All Rights Reserved.
             
             warningDiv.innerHTML = `
                 <div style="display: flex; align-items: start;">
-                    <div style="font-size: 30px; margin-right: 15px;">⚠️</div>
+                    <div style="font-size: 30px; margin-right: 15px;">🔒</div>
                     <div>
-                        <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px;">セキュリティのお願い</h3>
+                        <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px;">患者情報の取り扱いについて</h3>
                         <p style="margin: 0 0 10px 0; color: #856404; font-size: 14px; line-height: 1.6;">
-                            アップロードしたファイルを<strong>削除</strong>してください
+                            アップロードしたファイルは<strong>安全な場所で保管</strong>してください。<br>
+                            地図データをJSON保存した場合、元のファイルは削除することもできます。
                         </p>
                         <button onclick="showDeleteInstructions()" style="
                             background: #ffc107;
@@ -1655,7 +1684,7 @@ All Rights Reserved.
                             font-weight: bold;
                             font-size: 13px;
                             margin-right: 10px;
-                        ">削除方法を表示</button>
+                        ">管理方法を表示</button>
                         <button onclick="this.parentElement.parentElement.parentElement.remove()" style="
                             background: #6c757d;
                             color: white;
@@ -1680,7 +1709,7 @@ All Rights Reserved.
             }, 30000);
         }
         
-        // 削除手順を表示
+        // ファイル管理方法を表示
         function showDeleteInstructions() {
             const modal = document.createElement('div');
             modal.style.cssText = `
@@ -1705,34 +1734,44 @@ All Rights Reserved.
                     max-height: 80vh;
                     overflow-y: auto;
                 ">
-                    <h2 style="color: #e74c3c; margin-top: 0;">🗑️ ファイルの削除方法</h2>
+                    <h2 style="color: #3498db; margin-top: 0;">🔒 患者ファイルの管理方法</h2>
                     
-                    <h3 style="color: #2c3e50; font-size: 16px;">【Windows】</h3>
-                    <ol style="line-height: 1.8; color: #34495e;">
-                        <li>エクスプローラーを開く</li>
-                        <li>「ダウンロード」フォルダまたはファイルを保存した場所を開く</li>
-                        <li>ファイルを右クリック → 「削除」</li>
-                        <li><strong>ゴミ箱を空にする</strong>（重要！）</li>
-                    </ol>
+                    <h3 style="color: #2c3e50; font-size: 16px;">【推奨：安全な場所で保管】</h3>
+                    <ul style="line-height: 1.8; color: #34495e;">
+                        <li><strong>暗号化USBメモリ</strong>に保存</li>
+                        <li><strong>パスワード付きZIP</strong>で圧縮</li>
+                        <li><strong>施錠できる場所</strong>に保管</li>
+                        <li>定期的にバックアップを取る</li>
+                    </ul>
                     
-                    <h3 style="color: #2c3e50; font-size: 16px;">【Mac】</h3>
-                    <ol style="line-height: 1.8; color: #34495e;">
-                        <li>Finderを開く</li>
-                        <li>「ダウンロード」またはファイルを保存した場所を開く</li>
-                        <li>ファイルを右クリック → 「ゴミ箱に入れる」</li>
-                        <li><strong>ゴミ箱を空にする</strong>（重要！）</li>
-                    </ol>
+                    <h3 style="color: #2c3e50; font-size: 16px;">【オプション：JSON保存後の削除】</h3>
+                    <p style="color: #34495e; font-size: 14px;">
+                        地図データを「💾 地図データ保存」でJSON形式で保存した場合、<br>
+                        元のExcel/CSVファイルは削除することもできます。
+                    </p>
                     
-                    <h3 style="color: #2c3e50; font-size: 16px;">【USBメモリの場合】</h3>
-                    <ol style="line-height: 1.8; color: #34495e;">
-                        <li>ファイルを削除</li>
-                        <li>可能であれば<strong>USBを初期化</strong>（フォーマット）</li>
-                    </ol>
+                    <details style="margin-top: 15px;">
+                        <summary style="cursor: pointer; color: #3498db; font-weight: bold;">削除手順を表示</summary>
+                        <div style="margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                            <h4 style="color: #2c3e50; font-size: 14px; margin-top: 0;">Windows</h4>
+                            <ol style="font-size: 13px; line-height: 1.6; color: #34495e;">
+                                <li>ファイルを右クリック → 「削除」</li>
+                                <li><strong>ゴミ箱を空にする</strong></li>
+                            </ol>
+                            
+                            <h4 style="color: #2c3e50; font-size: 14px;">Mac</h4>
+                            <ol style="font-size: 13px; line-height: 1.6; color: #34495e;">
+                                <li>ファイルを右クリック → 「ゴミ箱に入れる」</li>
+                                <li><strong>ゴミ箱を空にする</strong></li>
+                            </ol>
+                        </div>
+                    </details>
                     
-                    <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-top: 20px;">
-                        <strong style="color: #856404;">⚠️ 重要</strong><br>
-                        <span style="color: #856404; font-size: 14px;">
-                        使用後は必ず<strong>ブラウザを完全に閉じて</strong>ください。
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #27ae60;">
+                        <strong style="color: #2e7d32;">💡 おすすめ運用</strong><br>
+                        <span style="color: #2e7d32; font-size: 14px;">
+                        月1回：Excel更新 → 地図作成 → JSON保存<br>
+                        災害時：JSONファイルを読み込んで即座に使用
                         </span>
                     </div>
                     
@@ -2027,6 +2066,8 @@ All Rights Reserved.
             
             showStatus('✅ BCP地図を保存しました。このファイルを安全な場所に保管してください。', 'success');
         }
+        
+        // Twitterシェア機能
         
         // JSON読み込み機能
         async function processJSON(file) {
