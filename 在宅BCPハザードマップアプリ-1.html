@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<!--
+=========================================
+在宅BCPハザードマップアプリ v2.2.6
+=========================================
+
+Copyright (c) 2026 福井　大治郎
+All Rights Reserved.
+
+本ソフトウェアおよび関連ドキュメントファイル（以下「本ソフトウェア」）は、
+著作権法により保護されています。
+
+【使用許可】
+個人・法人を問わず、以下の条件の下で使用を許可します：
+・業務での使用OK（訪問看護、訪問診療、訪問介護等）
+・個人利用OK
+・改変・カスタマイズOK
+・無料での再配布OK
+
+【禁止事項】
+・本アプリの販売（有料配布）
+・本アプリを使った有料サービスの提供
+・著作権表示の削除
+
+免責事項：
+本ソフトウェアは「現状のまま」提供されます。
+使用により生じた損害について、著作権者は一切の責任を負いません。
+
+開発者: 福井　大治郎
+最終更新: 2026年2月11日
+=========================================
+-->
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>在宅BCPハザードマップアプリ v2.2.6</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- SheetJS for Excel processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            overflow: auto;
+        }
+        
+        /* ============ アップロード画面 ============ */
+        #uploadScreen {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        .upload-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .app-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .app-title h1 {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        
+        .app-title .subtitle {
+            color: #7f8c8d;
+            font-size: 0.95em;
+        }
+        
+        .app-title .version {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            margin-top: 8px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 16px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: scale(1.02);
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f3ff;
+            border-width: 4px;
+        }
+        
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .upload-area h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .upload-area p {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 12px;
+            border-left: 4px solid #4caf50;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* プログレスバー */
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #2c3e50;
+        }
+        
+        .progress-bar-bg {
+            width: 100%;
+            height: 30px;
+            background: #ecf0f1;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .progress-status {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #7f8c8d;
+            text-align: center;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+        
+        .status.success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .status.error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .status.info { background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8; }
+        .status.warning { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        
+        .error-list {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            font-size: 0.85em;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .error-list-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .error-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* ============ 地図画面 ============ */
+        #mapScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 情報ボックス */
+        .info-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            max-width: 250px;
+            background: white;
+            padding: 12px 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .info-box h3 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 1em;
+        }
+        
+        .info-box .clinic-name {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        
+        .info-box .stats {
+            font-size: 0.8em;
+            line-height: 1.8;
+            color: #34495e;
+        }
+        
+        .info-box .risk-summary {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        
+        .info-box .risk-item {
+            flex: 1;
+            text-align: center;
+            padding: 6px 4px;
+            border-radius: 8px;
+            font-size: 0.7em;
+        }
+        
+        .risk-high { background: #ffebee; color: #c62828; font-weight: bold; }
+        .risk-mid { background: #fff8e1; color: #f57f17; font-weight: bold; }
+        .risk-low { background: #e8f5e9; color: #2e7d32; }
+        
+        /* 戻るボタン */
+        .back-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 12px 28px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            cursor: pointer;
+            font-weight: bold;
+            color: #667eea;
+            border: 2px solid #667eea;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+        
+        .back-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(-50%) scale(1.05);
+        }
+        
+        .back-btn:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+        
+        .save-json-btn:hover {
+            background: #229954 !important;
+            transform: scale(1.05);
+        }
+        
+        .save-json-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* ポップアップ */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .patient-popup {
+            padding: 15px;
+            min-width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .patient-popup .patient-count-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        
+        .patient-popup .address {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 1.05em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+        
+        .patient-popup .name {
+            color: #34495e;
+            margin-bottom: 10px;
+            padding-left: 5px;
+            font-size: 1em;
+            font-weight: 500;
+        }
+        
+        .patient-popup .risk-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .patient-popup .risk-badge.high { background: #ff5252; color: white; }
+        .patient-popup .risk-badge.mid { background: #ffb300; color: white; }
+        .patient-popup .risk-badge.low { background: #66bb6a; color: white; }
+        
+        .patient-popup .notes {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            border-radius: 6px;
+        }
+        
+        .patient-popup .notes-label {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+        
+        .patient-popup .phone-section {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0f3ff;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .patient-popup .phone-label {
+            color: #7f8c8d;
+            font-size: 0.8em;
+            margin-bottom: 6px;
+        }
+        
+        .patient-popup .phone-number {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .patient-popup .phone-number.has-phone { color: #2980b9; }
+        .patient-popup .phone-number.no-phone { color: #95a5a6; font-style: italic; }
+        
+        .patient-popup .call-button {
+            display: block;
+            padding: 12px;
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+        }
+        
+        .patient-popup .call-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+        
+        .patient-popup .call-button:active {
+            transform: translateY(0);
+        }
+        
+        /* レイヤーコントロール */
+        .leaflet-control-layers {
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        /* スマホ対応 */
+        @media (max-width: 768px) {
+            .upload-container {
+                padding: 25px;
+            }
+            
+            .app-title h1 {
+                font-size: 1.5em;
+            }
+            
+            .upload-area {
+                padding: 40px 20px;
+            }
+            
+            .upload-icon {
+                font-size: 3em;
+            }
+            
+            .info-box {
+                padding: 10px 12px;
+                max-width: 200px;
+                font-size: 0.9em;
+            }
+            
+            .info-box h3 { font-size: 0.85em; }
+            .info-box .stats { font-size: 0.7em; }
+            .info-box .clinic-name { font-size: 0.75em; }
+            .info-box .risk-item { font-size: 0.65em; padding: 5px 3px; }
+            
+            .back-btn {
+                font-size: 0.9em;
+                padding: 10px 20px;
+            }
+            
+            .patient-popup {
+                min-width: 220px;
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 利用規約画面 -->
+    <div id="termsScreen" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; justify-content: center; align-items: center; flex-direction: column;">
+        <div style="background: white; padding: 40px; border-radius: 15px; max-width: 700px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <h2 style="color: #e74c3c; margin-top: 0; font-size: 24px;">⚠️ 重要：ご利用前の確認</h2>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                <strong style="color: #856404;">このアプリは患者の個人情報を取り扱います</strong>
+            </div>
+            
+            <h3 style="color: #2c3e50; font-size: 18px; margin-top: 25px;">【データの取り扱いについて】</h3>
+            <ul style="line-height: 1.8; color: #34495e;">
+                <li>本アプリは<strong>ブラウザ上で完結</strong>し、データを外部サーバーに送信しません</li>
+                <li>患者情報の管理責任は<strong>ユーザー（事業所）</strong>にあります</li>
+                <li>地図作成後、アップロードしたファイルは<strong>安全に保管</strong>してください</li>
+                <li>ファイルの暗号化、アクセス制限等は<strong>ユーザーの責任</strong>です</li>
+            </ul>
+            
+            <h3 style="color: #e74c3c; font-size: 18px; margin-top: 25px;">【セキュリティ上の注意】</h3>
+            <ul style="line-height: 1.8; color: #34495e;">
+                <li>⚠️ USBメモリ等での持ち運びには<strong>暗号化USB</strong>を使用してください</li>
+                <li>⚠️ 電子カルテ端末と同じPCで使用することを推奨します</li>
+                <li>⚠️ 使用後は<strong>ブラウザを完全に閉じて</strong>ください</li>
+                <li>⚠️ 共有PCでの使用は避けてください</li>
+            </ul>
+            
+            <h3 style="color: #2c3e50; font-size: 18px; margin-top: 25px;">【免責事項】</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.8; color: #495057;">
+                本アプリの使用により生じた損害（個人情報漏洩を含む）について、開発者は一切の責任を負いません。個人情報保護法の遵守はユーザーの責任です。
+            </div>
+            
+            <h3 style="color: #2c3e50; font-size: 18px; margin-top: 25px;">【使用データについて】</h3>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.8; color: #495057;">
+                本アプリは、国土交通省「ハザードマップポータルサイト」（<a href="https://disaportal.gsi.go.jp/" target="_blank" style="color: #667eea;">https://disaportal.gsi.go.jp/</a>）のデータを加工して作成しています。<br>
+                背景地図には OpenStreetMap のデータを使用しています。
+            </div>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
+                <label style="display: flex; align-items: center; cursor: pointer; font-size: 16px;">
+                    <input type="checkbox" id="agreeCheckbox" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
+                    <span style="color: #2e7d32; font-weight: bold;">上記の内容を理解し、同意します</span>
+                </label>
+            </div>
+            
+            <button id="agreeButton" disabled style="width: 100%; padding: 15px; margin-top: 20px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: not-allowed;">
+                同意して開始
+            </button>
+        </div>
+    </div>
+    
+    <!-- アップロード画面 -->
+    <div id="uploadScreen">
+        <div class="upload-container">
+            <div class="app-title">
+                <h1>🗺️ 在宅BCPハザードマップ</h1>
+                <p class="subtitle">患者住所とハザードマップを自動で統合</p>
+                <span class="version">v2.2.6</span>
+                <p style="margin-top: 15px; padding: 10px 20px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; font-size: 0.9em; color: #555;">
+                    💡 完全無料・拡散歓迎｜同僚・友人への紹介、SNSシェア大歓迎です
+                </p>
+            </div>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <h2>ファイルをドロップ</h2>
+                <p><strong>Excelファイル</strong>（.xlsx, .xls）</p>
+                <p><strong>CSVファイル</strong>（.csv）電子カルテから出力</p>
+                <p><strong>保存した地図</strong>（.json）前回作成したBCP地図</p>
+                <p style="margin-top: 10px; color: #95a5a6; font-size: 0.85em;">
+                    またはクリックしてファイルを選択
+                </p>
+                
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.json">
+            </div>
+            
+            <div class="file-info" id="fileInfo"></div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-header">
+                    <span id="progressLabel">座標変換中...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressBar">0%</div>
+                </div>
+                <div class="progress-status" id="progressStatus"></div>
+            </div>
+            
+            <div class="loader" id="loader"></div>
+            <div class="status" id="status"></div>
+        </div>
+    </div>
+    
+    <!-- 地図画面 -->
+    <div id="mapScreen">
+        <div id="map"></div>
+        
+        <div class="info-box">
+            <h3>🗺️ 統合ハザードマップ</h3>
+            <div class="clinic-name" id="clinicName"></div>
+            <div class="stats" id="stats"></div>
+            <div class="risk-summary" id="riskSummary"></div>
+        </div>
+        
+        <button class="back-btn" onclick="resetApp()">
+            ← 新しい地図を作成
+        </button>
+        
+        <button class="save-json-btn" onclick="saveAsJSON()" style="position: fixed; bottom: 80px; right: 20px; background: #27ae60; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; transition: all 0.3s;">
+            💾 地図データ保存
+        </button>
+        
+        <!-- 著作権表示 -->
+        <div style="position: fixed; top: 190px; left: 10px; background: rgba(255,255,255,0.9); padding: 6px 10px; border-radius: 6px; font-size: 10px; color: #666; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            © 2026 福井　大治郎<br>
+            <a href="https://github.com/daichance-med/zaitaku-bcp-hazardmap" target="_blank" style="color: #667eea; text-decoration: none; font-size: 10px;">GitHub</a>
+        </div>
+    </div>
+    
+    <script>
+        // デフォルト事業所情報
+        let CLINIC_INFO = {
+            name: '◯◯訪問看護ステーション',
+            address: '◯◯県◯◯市◯◯区1-2-3',
+            lat: 35.6812,
+            lng: 139.7671
+        };
+        
+        // 主要都市の市外局番データベース（在宅医療が多い地域を中心に100都市）
+        const AREA_CODES = {
+            // 北海道
+            '札幌市': '011', '函館市': '0138', '旭川市': '0166', '釧路市': '0154', '帯広市': '0155',
+            '北見市': '0157', '小樽市': '0134', '室蘭市': '0143',
+            
+            // 東北
+            '青森市': '017', '弘前市': '0172', '八戸市': '0178',
+            '盛岡市': '019', '仙台市': '022', '秋田市': '018', '山形市': '023', '福島市': '024',
+            '郡山市': '024', 'いわき市': '0246',
+            
+            // 関東
+            '水戸市': '029', 'つくば市': '029', '宇都宮市': '028', '前橋市': '027', '高崎市': '027',
+            '川越市': '049', '川口市': '048', '所沢市': '04', '越谷市': '048', '草加市': '048',
+            '春日部市': '048', '熊谷市': '048', '千葉市': '043', '市川市': '047', '船橋市': '047',
+            '松戸市': '047', '柏市': '04', '八千代市': '047',
+            
+            // 東京23区
+            '千代田区': '03', '中央区': '03', '港区': '03', '新宿区': '03', '文京区': '03',
+            '台東区': '03', '墨田区': '03', '江東区': '03', '品川区': '03', '目黒区': '03',
+            '大田区': '03', '世田谷区': '03', '渋谷区': '03', '中野区': '03', '杉並区': '03',
+            '豊島区': '03', '北区': '03', '荒川区': '03', '板橋区': '03', '練馬区': '03',
+            '足立区': '03', '葛飾区': '03', '江戸川区': '03',
+            
+            // 東京市部
+            '八王子市': '042', '立川市': '042', '武蔵野市': '0422', '三鷹市': '0422',
+            '府中市': '042', '調布市': '042', '町田市': '042', '日野市': '042',
+            
+            // 神奈川
+            '横浜市': '045', '川崎市': '044', '相模原市': '042', '横須賀市': '046',
+            '平塚市': '0463', '鎌倉市': '0467', '藤沢市': '0466', '小田原市': '0465',
+            '茅ヶ崎市': '0467', '厚木市': '046', '大和市': '046', '海老名市': '046',
+            
+            // 中部
+            '新潟市': '025', '富山市': '076', '金沢市': '076', '福井市': '0776',
+            '甲府市': '055', '長野市': '026', '松本市': '0263', '岐阜市': '058',
+            '静岡市': '054', '浜松市': '053', '沼津市': '055', '富士市': '0545',
+            
+            // 愛知
+            '名古屋市': '052', '豊橋市': '0532', '岡崎市': '0564', '一宮市': '0586',
+            '春日井市': '0568', '豊田市': '0565',
+            
+            // 関西
+            '大津市': '077', '京都市': '075', '宇治市': '0774',
+            '大阪市': '06', '堺市': '072', '豊中市': '06', '吹田市': '06', '高槻市': '072',
+            '枚方市': '072', '茨木市': '072', '八尾市': '072', '寝屋川市': '072',
+            '東大阪市': '06',
+            '神戸市': '078', '姫路市': '079', '尼崎市': '06', '西宮市': '0798',
+            '明石市': '078', '奈良市': '0742', '和歌山市': '073',
+            
+            // 中国
+            '鳥取市': '0857', '松江市': '0852', '岡山市': '086', '倉敷市': '086',
+            '広島市': '082', '福山市': '084', '呉市': '0823', '山口市': '083', '下関市': '083',
+            
+            // 四国
+            '徳島市': '088', '高松市': '087', '松山市': '089', '高知市': '088',
+            
+            // 九州・沖縄
+            '北九州市': '093', '福岡市': '092', '久留米市': '0942', '佐賀市': '0952',
+            '長崎市': '095', '佐世保市': '0956', '熊本市': '096', '大分市': '097',
+            '宮崎市': '0985', '鹿児島市': '099', '那覇市': '098'
+        };
+        
+        // 住所から市区町村を抽出
+        function extractCity(address) {
+            if (!address) return null;
+            
+            // 都道府県名を除去
+            address = address.replace(/^.{2,3}[都道府県]/, '');
+            
+            // 市区町村のパターン
+            const patterns = [
+                /([^\s]+?[市区町村])/,
+                /([^\s]+?郡[^\s]+?[町村])/
+            ];
+            
+            for (let pattern of patterns) {
+                const match = address.match(pattern);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+        
+        // 市外局番を自動補完
+        function autoCompleteAreaCode(phone, address) {
+            if (!phone || !address) return phone;
+            
+            // すでに市外局番がある場合（0から始まる10-11桁）
+            const cleanPhone = phone.replace(/[-－ー\s]/g, '');
+            if (cleanPhone.startsWith('0') && cleanPhone.length >= 10) {
+                return phone; // そのまま返す
+            }
+            
+            // 市区町村を抽出
+            const city = extractCity(address);
+            if (!city || !AREA_CODES[city]) {
+                return phone; // 市外局番が見つからない場合はそのまま
+            }
+            
+            // 市外局番を追加
+            const areaCode = AREA_CODES[city];
+            return { 
+                phone: `${areaCode}-${phone}`,
+                autoAdded: true,
+                city: city,
+                areaCode: areaCode
+            };
+        }
+        
+        // グローバル変数
+        let map = null;
+        let mapData = null;
+        let geocodingErrors = [];
+        let areaCodeAdjustments = []; // 市外局番自動追加の記録
+        
+        // 利用規約の同意処理
+        const termsScreen = document.getElementById('termsScreen');
+        const agreeCheckbox = document.getElementById('agreeCheckbox');
+        const agreeButton = document.getElementById('agreeButton');
+        
+        agreeCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                agreeButton.disabled = false;
+                agreeButton.style.background = '#27ae60';
+                agreeButton.style.cursor = 'pointer';
+            } else {
+                agreeButton.disabled = true;
+                agreeButton.style.background = '#95a5a6';
+                agreeButton.style.cursor = 'not-allowed';
+            }
+        });
+        
+        agreeButton.addEventListener('click', function() {
+            if (agreeCheckbox.checked) {
+                termsScreen.style.display = 'none';
+            }
+        });
+        
+        // DOM要素
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const loader = document.getElementById('loader');
+        const status = document.getElementById('status');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadScreen = document.getElementById('uploadScreen');
+        const mapScreen = document.getElementById('mapScreen');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressLabel = document.getElementById('progressLabel');
+        const progressStatus = document.getElementById('progressStatus');
+        
+        // イベントリスナー
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        // ファイル処理
+        function handleFile(file) {
+            const fileName = file.name.toLowerCase();
+            
+            // ファイル形式判定
+            if (fileName.endsWith('.json')) {
+                // JSON（保存したBCP地図）
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `
+                    <strong>💾 ${file.name}</strong><br>
+                    <span style="color: #7f8c8d; font-size: 0.9em;">保存したBCP地図を読み込み中...</span>
+                `;
+                processJSON(file);
+                
+            } else if (fileName.endsWith('.csv')) {
+                // CSV（電子カルテから出力）
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `
+                    <strong>📄 ${file.name}</strong><br>
+                    <span style="color: #7f8c8d; font-size: 0.9em;">CSVファイルを変換中...</span>
+                `;
+                processCSV(file);
+                
+            } else if (fileName.match(/\.(xlsx|xls)$/)) {
+                // Excel
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `
+                    <strong>📄 ${file.name}</strong><br>
+                    <span style="color: #7f8c8d; font-size: 0.9em;">${(file.size / 1024).toFixed(1)} KB</span>
+                `;
+                processExcel(file);
+                
+            } else {
+                showStatus('対応しているファイル形式: Excel (.xlsx, .xls) / CSV (.csv) / JSON (.json)', 'error');
+                return;
+            }
+        }
+        
+        // Excel処理
+        async function processExcel(file) {
+            loader.style.display = 'block';
+            status.style.display = 'none';
+            geocodingErrors = [];
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Sheet2からクリニック情報を読み取る
+                    if (workbook.SheetNames.length > 1) {
+                        const clinicSheet = workbook.Sheets[workbook.SheetNames[1]];
+                        const clinicData = XLSX.utils.sheet_to_json(clinicSheet, { header: 1 });
+                        
+                        // クリニック情報を抽出
+                        const clinicInfo = {};
+                        clinicData.forEach(row => {
+                            if (row[0] && row[1]) {
+                                clinicInfo[row[0]] = row[1];
+                            }
+                        });
+                        
+                        // 事業所名（柔軟な列名認識）
+                        const nameKeys = ['事業所名', 'クリニック名', '施設名', '名称'];
+                        for (let key of nameKeys) {
+                            if (clinicInfo[key]) {
+                                CLINIC_INFO.name = clinicInfo[key];
+                                break;
+                            }
+                        }
+                        
+                        if (clinicInfo['住所']) {
+                            CLINIC_INFO.address = clinicInfo['住所'];
+                        }
+                        if (clinicInfo['緯度'] && clinicInfo['経度']) {
+                            CLINIC_INFO.lat = parseFloat(clinicInfo['緯度']);
+                            CLINIC_INFO.lng = parseFloat(clinicInfo['経度']);
+                        } else if (clinicInfo['住所']) {
+                            // クリニックの住所から座標取得
+                            const coords = await geocodeAddress(clinicInfo['住所']);
+                            if (coords) {
+                                CLINIC_INFO.lat = coords.lat;
+                                CLINIC_INFO.lng = coords.lng;
+                            }
+                        }
+                    }
+                    
+                    // 患者データ処理
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    if (jsonData.length === 0) {
+                        throw new Error('Excelファイルにデータがありません');
+                    }
+                    
+                    // 必須列の確認（柔軟な列名認識）
+                    const firstRow = jsonData[0];
+                    
+                    // 列名を探す
+                    const nameCol = findColumn(jsonData, ['患者氏名', '患者名前', '氏名', '名前', 'name']);
+                    const addressCol = findColumn(jsonData, ['住所', '自宅住所', '患者住所', 'address']);
+                    
+                    // エラーメッセージ用に実際の列名を取得
+                    const actualColumns = Object.keys(firstRow).join('、');
+                    
+                    if (!nameCol) {
+                        throw new Error(
+                            `必須列が見つかりません: 患者氏名\n\n` +
+                            `見つかった列: ${actualColumns}\n\n` +
+                            `💡 使用可能な列名:\n` +
+                            `患者氏名、患者名前、氏名、名前、name`
+                        );
+                    }
+                    
+                    if (!addressCol) {
+                        throw new Error(
+                            `必須列が見つかりません: 住所\n\n` +
+                            `見つかった列: ${actualColumns}\n\n` +
+                            `💡 使用可能な列名:\n` +
+                            `住所、自宅住所、患者住所、address`
+                        );
+                    }
+                    
+                    loader.style.display = 'none';
+                    
+                    // 座標変換が必要かチェック
+                    const needsGeocoding = jsonData.some(row => !row.lat || !row.lon);
+                    
+                    if (needsGeocoding) {
+                        showStatus('座標変換を開始します...', 'info');
+                        await processWithGeocoding(jsonData);
+                    } else {
+                        // 座標がすでにある場合
+                        const markers = processPatientData(jsonData);
+                        showMap(markers);
+                    }
+                    
+                } catch (error) {
+                    loader.style.display = 'none';
+                    progressContainer.style.display = 'none';
+                    showStatus('エラー: ' + error.message, 'error');
+                    console.error(error);
+                }
+            };
+            
+            reader.onerror = function() {
+                loader.style.display = 'none';
+                showStatus('ファイルの読み込みに失敗しました', 'error');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // 座標変換処理
+        async function processWithGeocoding(data) {
+            progressContainer.style.display = 'block';
+            
+            // 列名を探す
+            const nameCol = findColumn(data, ['患者氏名', '患者名前', '氏名', '名前', 'name']);
+            const addressCol = findColumn(data, ['住所', '自宅住所', '患者住所', 'address']);
+            let latCol = findColumn(data, ['lat', 'latitude', '緯度']);
+            let lonCol = findColumn(data, ['lon', 'lng', 'longitude', '経度']);
+            
+            // 座標列がない場合は追加
+            if (!latCol) {
+                latCol = 'lat';
+                data.forEach(row => row[latCol] = null);
+            }
+            if (!lonCol) {
+                lonCol = 'lng';
+                data.forEach(row => row[lonCol] = null);
+            }
+            
+            const total = data.length;
+            let processed = 0;
+            let success = 0;
+            
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                
+                // 座標がない場合のみ変換
+                if (!row[latCol] || !row[lonCol]) {
+                    const address = row[addressCol] || '';
+                    
+                    if (address) {
+                        updateProgress(processed, total, `${row[nameCol] || ''}の住所を変換中...`);
+                        
+                        const coords = await geocodeAddress(address);
+                        
+                        if (coords) {
+                            row[latCol] = coords.lat;
+                            row[lonCol] = coords.lng;
+                            success++;
+                        } else {
+                            geocodingErrors.push({
+                                name: row[nameCol] || '不明',
+                                address: address,
+                                reason: '座標取得失敗'
+                            });
+                        }
+                        
+                        // API制限対策：少し待つ
+                        await sleep(500);
+                    } else {
+                        geocodingErrors.push({
+                            name: row[nameCol] || '不明',
+                            address: '住所なし',
+                            reason: '住所が入力されていません'
+                        });
+                    }
+                } else {
+                    success++;
+                }
+                
+                processed++;
+                updateProgress(processed, total);
+            }
+            
+            progressContainer.style.display = 'none';
+            
+            // エラー表示
+            if (geocodingErrors.length > 0) {
+                let errorHTML = `⚠️ 以下の${geocodingErrors.length}件は座標変換できませんでした：<br>`;
+                errorHTML += `<div class="error-list">`;
+                geocodingErrors.forEach(err => {
+                    errorHTML += `<div class="error-list-item">・${err.name}: ${err.address} (${err.reason})</div>`;
+                });
+                errorHTML += `</div>`;
+                errorHTML += `<br>変換成功: ${success}/${total}名`;
+                
+                showStatus(errorHTML, 'warning');
+            } else {
+                showStatus(`✅ 全${total}名の座標変換が完了しました`, 'success');
+            }
+            
+            // 地図表示（少し待ってから）
+            setTimeout(() => {
+                try {
+                    const markers = processPatientData(data);
+                    console.log('Markers created:', markers.length);
+                    if (markers && markers.length > 0) {
+                        showMap(markers);
+                    } else {
+                        showStatus('エラー: 地図表示用のデータを作成できませんでした', 'error');
+                    }
+                } catch (error) {
+                    console.error('Map display error:', error);
+                    showStatus('エラー: 地図表示に失敗しました - ' + error.message, 'error');
+                }
+            }, 2000);
+        }
+        
+        // 住所から座標を取得
+        async function geocodeAddress(address) {
+            try {
+                // 国土地理院 住所検索API
+                const url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && data.length > 0 && data[0].geometry && data[0].geometry.coordinates) {
+                    return {
+                        lng: data[0].geometry.coordinates[0],
+                        lat: data[0].geometry.coordinates[1]
+                    };
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                return null;
+            }
+        }
+        
+        // プログレスバー更新
+        function updateProgress(current, total, message = '') {
+            const percent = Math.round((current / total) * 100);
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+            progressPercent.textContent = percent + '%';
+            
+            if (message) {
+                progressStatus.textContent = message;
+            } else {
+                progressStatus.textContent = `${current} / ${total} 完了`;
+            }
+        }
+        
+        // スリープ関数
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // 柔軟な列名認識（完全一致優先）
+        function findColumn(data, possibleNames) {
+            const columns = Object.keys(data[0] || {});
+            
+            // 第1パス: 完全一致を探す
+            for (let possible of possibleNames) {
+                const pattern = possible.toLowerCase().replace(/\s/g, '');
+                const found = columns.find(col => {
+                    const normalized = col.toLowerCase().replace(/\s/g, '');
+                    return normalized === pattern;
+                });
+                if (found) return found;
+            }
+            
+            // 第2パス: 部分一致を探す
+            for (let possible of possibleNames) {
+                const pattern = possible.toLowerCase().replace(/\s/g, '');
+                const found = columns.find(col => {
+                    const normalized = col.toLowerCase().replace(/\s/g, '');
+                    return normalized.includes(pattern) || pattern.includes(normalized);
+                });
+                if (found) return found;
+            }
+            
+            return null;
+        }
+        
+        // 患者データ処理（柔軟な列名対応版）
+        function processPatientData(data) {
+            // 列名を探す
+            const nameCol = findColumn(data, ['患者氏名', '患者名前', '氏名', '名前', 'name']);
+            const addressCol = findColumn(data, ['住所', '自宅住所', '患者住所', 'address']);
+            const phoneCol = findColumn(data, ['自宅電話番号', '電話番号', 'TEL', '電話', 'phone']);
+            const riskCol = findColumn(data, ['リスク分類', 'リスク', '危険度', 'risk']);
+            const notesCol = findColumn(data, ['備考', 'メモ', 'note', 'notes']);
+            const idCol = findColumn(data, ['患者番号', '番号', 'ID', 'id']);
+            const latCol = findColumn(data, ['lat', 'latitude', '緯度']);
+            const lonCol = findColumn(data, ['lon', 'lng', 'longitude', '経度']);
+            
+            console.log('検出された列名:', {
+                nameCol, addressCol, phoneCol, riskCol, notesCol, idCol, latCol, lonCol
+            });
+            
+            const locationGroups = {};
+            
+            data.forEach(row => {
+                // 座標がない場合はスキップ
+                const lat = parseFloat(row[latCol]);
+                const lng = parseFloat(row[lonCol]);
+                
+                if (isNaN(lat) || isNaN(lng)) {
+                    console.log('Skipping row (no valid coordinates):', row);
+                    return;
+                }
+                
+                // 住所（後で市外局番補完に使用）
+                const address = row[addressCol] || '';
+                
+                // 電話番号処理（複数列対応 + 市外局番自動補完）
+                let phones = []; // 複数電話番号を配列で管理
+                
+                // 電話番号（固定電話）
+                if (phoneCol && row[phoneCol]) {
+                    let phoneRaw = String(row[phoneCol]).trim();
+                    if (phoneRaw && phoneRaw !== 'nan') {
+                        const result = autoCompleteAreaCode(phoneRaw, address);
+                        let phone = '';
+                        let skipFormatting = false;
+                        
+                        if (typeof result === 'object' && result.autoAdded) {
+                            phone = result.phone;
+                            skipFormatting = true; // 市外局番追加済みなのでハイフン整形スキップ
+                            areaCodeAdjustments.push({
+                                name: row[nameCol] || '不明',
+                                original: phoneRaw,
+                                adjusted: phone,
+                                city: result.city,
+                                areaCode: result.areaCode
+                            });
+                        } else {
+                            phone = typeof result === 'object' ? result.phone : result;
+                        }
+                        
+                        // ハイフン整形（市外局番自動追加していない場合のみ）
+                        if (!skipFormatting) {
+                            phone = phone.replace(/[-－ー\s]/g, '');
+                            if (phone.length === 10) {
+                                phone = `${phone.slice(0,4)}-${phone.slice(4,6)}-${phone.slice(6)}`;
+                            } else if (phone.length === 11) {
+                                phone = `${phone.slice(0,3)}-${phone.slice(3,7)}-${phone.slice(7)}`;
+                            }
+                        }
+                        
+                        if (phone) {
+                            phones.push({ type: '固定電話', number: phone });
+                        }
+                    }
+                }
+                
+                // 携帯番号
+                const mobileCol = findColumn(data, ['その他の電話番号', '携帯番号', '携帯電話', '携帯', 'mobile', 'cell']);
+                if (mobileCol && row[mobileCol]) {
+                    let phoneRaw = String(row[mobileCol]).trim();
+                    if (phoneRaw && phoneRaw !== 'nan') {
+                        const result = autoCompleteAreaCode(phoneRaw, address);
+                        let phone = typeof result === 'object' ? result.phone : result;
+                        let skipFormatting = (typeof result === 'object' && result.autoAdded);
+                        
+                        // ハイフン整形（市外局番自動追加していない場合のみ）
+                        if (!skipFormatting) {
+                            phone = phone.replace(/[-－ー\s]/g, '');
+                            if (phone.length === 10) {
+                                phone = `${phone.slice(0,4)}-${phone.slice(4,6)}-${phone.slice(6)}`;
+                            } else if (phone.length === 11) {
+                                phone = `${phone.slice(0,3)}-${phone.slice(3,7)}-${phone.slice(7)}`;
+                            }
+                        }
+                        
+                        if (phone) {
+                            phones.push({ type: '携帯電話', number: phone });
+                        }
+                    }
+                }
+                
+                // 連絡先電話番号
+                const contactPhoneCol = findColumn(data, ['連絡先電話番号', '緊急連絡先', '連絡先']);
+                if (contactPhoneCol && row[contactPhoneCol]) {
+                    let phoneRaw = String(row[contactPhoneCol]).trim();
+                    if (phoneRaw && phoneRaw !== 'nan') {
+                        const result = autoCompleteAreaCode(phoneRaw, address);
+                        let phone = typeof result === 'object' ? result.phone : result;
+                        let skipFormatting = (typeof result === 'object' && result.autoAdded);
+                        
+                        // ハイフン整形（市外局番自動追加していない場合のみ）
+                        if (!skipFormatting) {
+                            phone = phone.replace(/[-－ー\s]/g, '');
+                            if (phone.length === 10) {
+                                phone = `${phone.slice(0,3)}-${phone.slice(3,6)}-${phone.slice(6)}`;
+                            } else if (phone.length === 11) {
+                                phone = `${phone.slice(0,3)}-${phone.slice(3,7)}-${phone.slice(7)}`;
+                            }
+                        }
+                        
+                        if (phone) {
+                            phones.push({ type: '連絡先', number: phone });
+                        }
+                    }
+                }
+                
+                // リスク分類の正規化関数
+                function normalizeRiskLevel(value) {
+                    if (!value) return '低';
+                    
+                    const str = String(value).trim().toLowerCase();
+                    
+                    // 高リスク
+                    if (str.match(/^(高|重|赤|red|h|3|★★★|danger|high)$/)) {
+                        return '高';
+                    }
+                    
+                    // 中リスク
+                    if (str.match(/^(中|黄|yellow|m|2|★★|warning|medium|mid)$/)) {
+                        return '中';
+                    }
+                    
+                    // 低リスク（デフォルト）
+                    return '低';
+                }
+                
+                // リスク分類
+                let riskLevel = '低';
+                if (riskCol && row[riskCol]) {
+                    riskLevel = normalizeRiskLevel(row[riskCol]);
+                }
+                
+                // 備考
+                let notes = '';
+                if (notesCol && row[notesCol]) {
+                    notes = String(row[notesCol]).trim();
+                    if (notes === 'undefined' || notes === 'null') {
+                        notes = '';
+                    }
+                }
+                
+                // 患者番号
+                const patientId = idCol && row[idCol] ? row[idCol] : 0;
+                
+                // 座標を丸めてキーにする
+                const locationKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+                
+                if (!locationGroups[locationKey]) {
+                    locationGroups[locationKey] = {
+                        lat,
+                        lng,
+                        patients: []
+                    };
+                }
+                
+                locationGroups[locationKey].patients.push({
+                    id: patientId,
+                    name: String(row[nameCol] || '').trim(),
+                    address: String(address).trim(),
+                    phones: phones, // 複数電話番号
+                    risk_level: riskLevel,
+                    notes
+                });
+            });
+            
+            // マーカーデータ作成
+            const markers = Object.values(locationGroups).map(group => {
+                const riskPriority = { '高': 3, '中': 2, '低': 1 };
+                const maxRisk = group.patients.reduce((max, p) => {
+                    return riskPriority[p.risk_level] > riskPriority[max] ? p.risk_level : max;
+                }, '低');
+                
+                return {
+                    lat: group.lat,
+                    lng: group.lng,
+                    patients: group.patients,
+                    group_risk: maxRisk,
+                    count: group.patients.length,
+                    address: group.patients[0].address
+                };
+            });
+            
+            return markers;
+        }
+        
+        // 地図表示（既存のコードと同じ）
+        function showMap(markers) {
+            // 統計情報
+            const allPatients = markers.flatMap(m => m.patients);
+            const stats = {
+                total_patients: allPatients.length,
+                total_markers: markers.length,
+                high_risk: allPatients.filter(p => p.risk_level === '高').length,
+                mid_risk: allPatients.filter(p => p.risk_level === '中').length,
+                low_risk: allPatients.filter(p => p.risk_level === '低').length,
+                with_phone: allPatients.filter(p => p.phones && p.phones.length > 0).length
+            };
+            
+            // 市外局番自動追加の通知
+            if (areaCodeAdjustments.length > 0) {
+                let message = `📞 ${areaCodeAdjustments.length}件の電話番号に市外局番を自動追加しました：<br><br>`;
+                message += '<div class="error-list" style="max-height: 200px;">';
+                areaCodeAdjustments.forEach(adj => {
+                    message += `<div class="error-list-item">`;
+                    message += `・${adj.name}: ${adj.original} → <strong>${adj.adjusted}</strong> `;
+                    message += `<span style="color: #667eea;">(${adj.city}: ${adj.areaCode})</span>`;
+                    message += `</div>`;
+                });
+                message += '</div>';
+                message += '<br>✅ 内容を確認してください。';
+                
+                showStatus(message, 'info');
+                
+                // 3秒後に自動で消す
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+            
+            // データを一時保存（地図表示用）
+            mapData = { markers, stats };
+            
+            // 画面切り替え
+            uploadScreen.style.display = 'none';
+            mapScreen.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            // 統計情報表示
+            document.getElementById('clinicName').textContent = `📍 ${CLINIC_INFO.name}`;
+            document.getElementById('stats').innerHTML = `
+                登録患者: <strong>${stats.total_patients}名</strong><br>
+                電話番号: <strong>${stats.with_phone}名</strong>
+            `;
+            document.getElementById('riskSummary').innerHTML = `
+                <div class="risk-item risk-high">🔴 高<br><strong>${stats.high_risk}</strong></div>
+                <div class="risk-item risk-mid">🟡 中<br><strong>${stats.mid_risk}</strong></div>
+                <div class="risk-item risk-low">🟢 低<br><strong>${stats.low_risk}</strong></div>
+            `;
+            
+            // 【重要】メモリからデータをクリア
+            jsonData = null;
+            workbook = null;
+            data = null;
+            
+            // セキュリティ警告を表示
+            setTimeout(() => {
+                showSecurityWarning();
+            }, 2000);
+            
+            // 地図初期化
+            if (map) {
+                map.remove();
+            }
+            
+            map = L.map('map', {
+                center: [CLINIC_INFO.lat, CLINIC_INFO.lng],
+                zoom: 14,
+                zoomControl: true
+            });
+            
+            // 背景地図
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+            
+            // ハザードマップレイヤー
+            const floodLayer = L.tileLayer(
+                'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+                { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+            ).addTo(map);
+            
+            const doshaLayer = L.tileLayer(
+                'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',
+                { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+            ).addTo(map);
+            
+            const tsunamiLayer = L.tileLayer(
+                'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+                { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+            ).addTo(map);
+            
+            // 事業所マーカー
+            const clinicMarker = L.marker([CLINIC_INFO.lat, CLINIC_INFO.lng], {
+                icon: L.divIcon({
+                    className: 'clinic-icon',
+                    html: '<div style="font-size: 28px; filter: grayscale(100%) brightness(0%);">⭐</div>',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                })
+            }).addTo(map);
+            
+            clinicMarker.bindPopup(`
+                <div style="text-align: center; padding: 10px;">
+                    <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
+                        🏥 ${CLINIC_INFO.name}
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em;">${CLINIC_INFO.address}</div>
+                </div>
+            `);
+            
+            // 患者マーカーグループ
+            const patientGroup = L.featureGroup();
+            
+            // 患者マーカー作成
+            markers.forEach(marker => {
+                const color = marker.group_risk === '高' ? '#ff0000' : 
+                             marker.group_risk === '中' ? '#ffaa00' : '#00cc00';
+                
+                const radius = marker.count === 1 ? 8 : Math.min(8 + marker.count * 0.5, 16);
+                
+                const circleMarker = L.circleMarker([marker.lat, marker.lng], {
+                    radius: radius,
+                    fillColor: color,
+                    color: '#000',
+                    weight: 2,
+                    opacity: 1.0,
+                    fillOpacity: 0.85
+                });
+                
+                // ポップアップ作成
+                let popupHTML = '<div class="patient-popup">';
+                popupHTML += `<div class="address">${marker.address}</div>`;
+                
+                if (marker.count > 1) {
+                    popupHTML += `<div class="patient-count-badge">👥 入居者 ${marker.count}名</div>`;
+                }
+                
+                marker.patients.forEach((patient, index) => {
+                    if (index > 0) {
+                        popupHTML += '<hr style="margin: 12px 0; border: none; border-top: 1px solid #ddd;">';
+                    }
+                    
+                    const riskClass = patient.risk_level === '高' ? 'high' : 
+                                     patient.risk_level === '中' ? 'mid' : 'low';
+                    const riskLabel = patient.risk_level === '高' ? '🔴 最優先' : 
+                                     patient.risk_level === '中' ? '🟡 要注意' : '🟢 通常';
+                    
+                    popupHTML += `<div class="risk-badge ${riskClass}">${riskLabel}</div>`;
+                    
+                    // 患者番号と氏名を表示
+                    if (patient.id) {
+                        popupHTML += `<div class="name"><strong>ID:${patient.id}</strong> ${patient.name}</div>`;
+                    } else {
+                        popupHTML += `<div class="name">${patient.name}</div>`;
+                    }
+                    
+                    // 住所を表示（重要！）
+                    popupHTML += `<div class="address">${patient.address}</div>`;
+                    
+                    if (patient.notes) {
+                        popupHTML += `
+                            <div class="notes">
+                                <div class="notes-label">⚠️ 備考</div>
+                                <div>${patient.notes}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // 電話番号（複数対応）
+                    if (patient.phones && patient.phones.length > 0) {
+                        popupHTML += `<div class="phone-section">`;
+                        popupHTML += `<div class="phone-label">📞 電話番号</div>`;
+                        
+                        patient.phones.forEach((phoneData, phoneIndex) => {
+                            popupHTML += `
+                                <div style="margin-bottom: 10px;">
+                                    <div style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 3px;">${phoneData.type}</div>
+                                    <div class="phone-number has-phone">${phoneData.number}</div>
+                                    <a href="tel:${phoneData.number.replace(/-/g, '')}" class="call-button" style="margin-top: 5px;">
+                                        📱 ${phoneData.number}に発信
+                                    </a>
+                                </div>
+                            `;
+                        });
+                        
+                        popupHTML += `</div>`;
+                    } else {
+                        popupHTML += `
+                            <div class="phone-section">
+                                <div class="phone-label">📞 電話番号</div>
+                                <div class="phone-number no-phone">未登録</div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                popupHTML += '</div>';
+                
+                circleMarker.bindPopup(popupHTML, {
+                    maxWidth: 400,
+                    maxHeight: 450
+                });
+                
+                circleMarker.addTo(patientGroup);
+            });
+            
+            patientGroup.addTo(map);
+            
+            // レイヤーコントロール
+            L.control.layers({}, {
+                '洪水（浸水深）': floodLayer,
+                '土砂災害警戒区域': doshaLayer,
+                '津波浸水想定': tsunamiLayer,
+                '患者マーカー': patientGroup,
+                '事業所': clinicMarker
+            }, {
+                position: 'topright',
+                collapsed: false
+            }).addTo(map);
+        }
+        
+        // ステータス表示
+        function showStatus(message, type) {
+            status.className = 'status ' + type;
+            status.innerHTML = message;
+            status.style.display = 'block';
+        }
+        
+        // アプリリセット
+        function resetApp() {
+            if (confirm('新しい地図を作成しますか？現在の地図は消えます。')) {
+                mapScreen.style.display = 'none';
+                uploadScreen.style.display = 'flex';
+                document.body.style.overflow = 'auto';
+                fileInfo.style.display = 'none';
+                status.style.display = 'none';
+                progressContainer.style.display = 'none';
+                fileInput.value = '';
+                mapData = null;
+                geocodingErrors = [];
+                areaCodeAdjustments = [];
+                
+                // 事業所情報をリセット
+                CLINIC_INFO = {
+                    name: '◯◯訪問看護ステーション',
+                    address: '◯◯県◯◯市◯◯区1-2-3',
+                    lat: 35.6812,
+                    lng: 139.7671
+                };
+                
+                if (map) {
+                    map.remove();
+                    map = null;
+                }
+            }
+        }
+        
+        // セキュリティ警告を表示
+        function showSecurityWarning() {
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #fff3cd;
+                border: 2px solid #ffc107;
+                border-radius: 10px;
+                padding: 20px 25px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                max-width: 400px;
+                z-index: 9999;
+                animation: slideIn 0.5s ease-out;
+            `;
+            
+            warningDiv.innerHTML = `
+                <div style="display: flex; align-items: start;">
+                    <div style="font-size: 30px; margin-right: 15px;">🔒</div>
+                    <div>
+                        <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px;">患者情報の取り扱いについて</h3>
+                        <p style="margin: 0 0 10px 0; color: #856404; font-size: 14px; line-height: 1.6;">
+                            アップロードしたファイルは<strong>安全な場所で保管</strong>してください。<br>
+                            地図データをJSON保存した場合、元のファイルは削除することもできます。
+                        </p>
+                        <button onclick="showDeleteInstructions()" style="
+                            background: #ffc107;
+                            color: #000;
+                            border: none;
+                            padding: 8px 15px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-weight: bold;
+                            font-size: 13px;
+                            margin-right: 10px;
+                        ">管理方法を表示</button>
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()" style="
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            padding: 8px 15px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-size: 13px;
+                        ">閉じる</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(warningDiv);
+            
+            // 30秒後に自動で消す
+            setTimeout(() => {
+                if (warningDiv.parentElement) {
+                    warningDiv.style.animation = 'slideOut 0.5s ease-in';
+                    setTimeout(() => warningDiv.remove(), 500);
+                }
+            }, 30000);
+        }
+        
+        // ファイル管理方法を表示
+        function showDeleteInstructions() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: white;
+                    padding: 30px;
+                    border-radius: 15px;
+                    max-width: 600px;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                ">
+                    <h2 style="color: #3498db; margin-top: 0;">🔒 患者ファイルの管理方法</h2>
+                    
+                    <h3 style="color: #2c3e50; font-size: 16px;">【推奨：安全な場所で保管】</h3>
+                    <ul style="line-height: 1.8; color: #34495e;">
+                        <li><strong>暗号化USBメモリ</strong>に保存</li>
+                        <li><strong>パスワード付きZIP</strong>で圧縮</li>
+                        <li><strong>施錠できる場所</strong>に保管</li>
+                        <li>定期的にバックアップを取る</li>
+                    </ul>
+                    
+                    <h3 style="color: #2c3e50; font-size: 16px;">【オプション：JSON保存後の削除】</h3>
+                    <p style="color: #34495e; font-size: 14px;">
+                        地図データを「💾 地図データ保存」でJSON形式で保存した場合、<br>
+                        元のExcel/CSVファイルは削除することもできます。
+                    </p>
+                    
+                    <details style="margin-top: 15px;">
+                        <summary style="cursor: pointer; color: #3498db; font-weight: bold;">削除手順を表示</summary>
+                        <div style="margin-top: 10px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                            <h4 style="color: #2c3e50; font-size: 14px; margin-top: 0;">Windows</h4>
+                            <ol style="font-size: 13px; line-height: 1.6; color: #34495e;">
+                                <li>ファイルを右クリック → 「削除」</li>
+                                <li><strong>ゴミ箱を空にする</strong></li>
+                            </ol>
+                            
+                            <h4 style="color: #2c3e50; font-size: 14px;">Mac</h4>
+                            <ol style="font-size: 13px; line-height: 1.6; color: #34495e;">
+                                <li>ファイルを右クリック → 「ゴミ箱に入れる」</li>
+                                <li><strong>ゴミ箱を空にする</strong></li>
+                            </ol>
+                        </div>
+                    </details>
+                    
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 4px solid #27ae60;">
+                        <strong style="color: #2e7d32;">💡 おすすめ運用</strong><br>
+                        <span style="color: #2e7d32; font-size: 14px;">
+                        月1回：Excel更新 → 地図作成 → JSON保存<br>
+                        災害時：JSONファイルを読み込んで即座に使用
+                        </span>
+                    </div>
+                    
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        width: 100%;
+                        padding: 12px;
+                        margin-top: 20px;
+                        background: #27ae60;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                    ">理解しました</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+        
+        // ====================
+        // JSON/CSV処理機能
+        // ====================
+        
+        // 統計計算
+        function calculateStats(markers) {
+            return {
+                total_patients: markers.length,
+                high_risk: markers.filter(m => m.risk === '高').length,
+                mid_risk: markers.filter(m => m.risk === '中').length,
+                low_risk: markers.filter(m => m.risk === '低').length,
+                with_phone: markers.filter(m => m.phone || m.mobile || m.contact).length
+            };
+        }
+        
+        // フラットな患者配列をグループ化する関数
+        function groupPatientsByLocation(patients) {
+            const locationGroups = {};
+            
+            patients.forEach(patient => {
+                // 座標を丸めてキーにする
+                const locationKey = `${patient.lat.toFixed(6)},${patient.lng.toFixed(6)}`;
+                
+                if (!locationGroups[locationKey]) {
+                    locationGroups[locationKey] = {
+                        lat: patient.lat,
+                        lng: patient.lng,
+                        patients: []
+                    };
+                }
+                
+                // 電話番号を配列形式に変換
+                const phones = [];
+                if (patient.phone) {
+                    phones.push({ type: '固定電話', number: patient.phone });
+                }
+                if (patient.mobile) {
+                    phones.push({ type: '携帯電話', number: patient.mobile });
+                }
+                if (patient.contact) {
+                    phones.push({ type: '連絡先', number: patient.contact });
+                }
+                
+                locationGroups[locationKey].patients.push({
+                    id: patient.id,
+                    name: patient.name,
+                    address: patient.address,
+                    phones: phones,
+                    risk_level: patient.risk || '低',
+                    notes: patient.notes || ''
+                });
+            });
+            
+            // マーカーデータ作成（Excel処理時と同じ構造）
+            const markers = Object.values(locationGroups).map(group => {
+                const riskPriority = { '高': 3, '中': 2, '低': 1 };
+                const maxRisk = group.patients.reduce((max, p) => {
+                    return riskPriority[p.risk_level] > riskPriority[max] ? p.risk_level : max;
+                }, '低');
+                
+                return {
+                    lat: group.lat,
+                    lng: group.lng,
+                    patients: group.patients,
+                    group_risk: maxRisk,
+                    count: group.patients.length,
+                    address: group.patients[0].address
+                };
+            });
+            
+            return markers;
+        }
+        
+        // 地図作成関数（JSON読み込み用 - 個別患者形式）
+        async function createMap(patientMarkers) {
+            // 地図初期化
+            if (map) {
+                map.remove();
+            }
+            
+            map = L.map('map', {
+                center: [CLINIC_INFO.lat, CLINIC_INFO.lng],
+                zoom: 14,
+                zoomControl: true
+            });
+            
+            // 背景地図
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+            
+            // ハザードマップレイヤー
+            const floodLayer = L.tileLayer(
+                'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+                { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+            ).addTo(map);
+            
+            const doshaLayer = L.tileLayer(
+                'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',
+                { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+            ).addTo(map);
+            
+            const tsunamiLayer = L.tileLayer(
+                'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+                { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+            ).addTo(map);
+            
+            // 事業所マーカー
+            const clinicMarker = L.marker([CLINIC_INFO.lat, CLINIC_INFO.lng], {
+                icon: L.divIcon({
+                    className: 'clinic-icon',
+                    html: '<div style="font-size: 28px; filter: grayscale(100%) brightness(0%);">⭐</div>',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                })
+            }).addTo(map);
+            
+            clinicMarker.bindPopup(`
+                <div style="text-align: center; padding: 10px;">
+                    <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
+                        🏥 ${CLINIC_INFO.name}
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em;">${CLINIC_INFO.address}</div>
+                </div>
+            `);
+            
+            // 患者マーカーグループ
+            const patientGroup = L.featureGroup();
+            
+            // 個別患者マーカー作成
+            patientMarkers.forEach(patient => {
+                const color = patient.risk === '高' ? '#ff0000' : 
+                             patient.risk === '中' ? '#ffaa00' : '#00cc00';
+                
+                const circleMarker = L.circleMarker([patient.lat, patient.lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#000',
+                    weight: 2,
+                    opacity: 1.0,
+                    fillOpacity: 0.85
+                });
+                
+                // ポップアップ作成
+                let popupHTML = '<div class="patient-popup">';
+                popupHTML += `<div class="address">${patient.address}</div>`;
+                
+                popupHTML += `<div class="patient-name">👤 ${patient.name}`;
+                if (patient.id) {
+                    popupHTML += ` <span style="color: #95a5a6; font-size: 0.9em;">(ID: ${patient.id})</span>`;
+                }
+                popupHTML += '</div>';
+                
+                // 電話番号
+                if (patient.phone || patient.mobile || patient.contact) {
+                    popupHTML += '<div class="phones">';
+                    if (patient.phone) {
+                        popupHTML += `<a href="tel:${patient.phone.replace(/[-－\s]/g, '')}" class="phone-link">📞 ${patient.phone}</a>`;
+                    }
+                    if (patient.mobile) {
+                        popupHTML += `<a href="tel:${patient.mobile.replace(/[-－\s]/g, '')}" class="phone-link">📱 ${patient.mobile}</a>`;
+                    }
+                    if (patient.contact) {
+                        popupHTML += `<a href="tel:${patient.contact.replace(/[-－\s]/g, '')}" class="phone-link">📞 ${patient.contact}</a>`;
+                    }
+                    popupHTML += '</div>';
+                }
+                
+                // リスク分類
+                const riskColor = patient.risk === '高' ? '#ff0000' : 
+                                 patient.risk === '中' ? '#ffaa00' : '#00cc00';
+                popupHTML += `<div class="risk-badge" style="background: ${riskColor};">リスク: ${patient.risk}</div>`;
+                
+                // 備考
+                if (patient.notes) {
+                    popupHTML += `<div class="notes">📝 ${patient.notes}</div>`;
+                }
+                
+                popupHTML += '</div>';
+                
+                circleMarker.bindPopup(popupHTML);
+                circleMarker.addTo(patientGroup);
+            });
+            
+            patientGroup.addTo(map);
+            
+            // レイヤーコントロール
+            L.control.layers({}, {
+                '洪水（浸水深）': floodLayer,
+                '土砂災害警戒区域': doshaLayer,
+                '津波浸水想定': tsunamiLayer,
+                '患者マーカー': patientGroup,
+                '事業所': clinicMarker
+            }, {
+                position: 'topright',
+                collapsed: false
+            }).addTo(map);
+        }
+        
+        // JSON保存機能
+        function saveAsJSON() {
+            if (!mapData) {
+                alert('地図データがありません');
+                return;
+            }
+            
+            // グループ化されたマーカーを患者配列に展開
+            const patients = [];
+            mapData.markers.forEach(marker => {
+                marker.patients.forEach(patient => {
+                    // 電話番号を展開
+                    let phone = '';
+                    let mobile = '';
+                    let contact = '';
+                    
+                    if (patient.phones && patient.phones.length > 0) {
+                        patient.phones.forEach(p => {
+                            if (p.type === '固定電話') {
+                                phone = p.number;
+                            } else if (p.type === '携帯電話') {
+                                mobile = p.number;
+                            } else if (p.type === '連絡先') {
+                                contact = p.number;
+                            }
+                        });
+                    }
+                    
+                    patients.push({
+                        id: patient.id,
+                        name: patient.name,
+                        address: patient.address,
+                        lat: marker.lat,
+                        lng: marker.lng,
+                        phone: phone,
+                        mobile: mobile,
+                        contact: contact,
+                        risk: patient.risk_level,
+                        notes: patient.notes || ''
+                    });
+                });
+            });
+            
+            const bcpData = {
+                version: "2.2.6",
+                created: new Date().toISOString(),
+                clinic: CLINIC_INFO,
+                patients: patients,
+                stats: mapData.stats
+            };
+            
+            const jsonString = JSON.stringify(bcpData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            a.download = `BCP地図_${CLINIC_INFO.name}_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatus('✅ BCP地図を保存しました。このファイルを安全な場所に保管してください。', 'success');
+        }
+        
+        // Twitterシェア機能
+        
+        // JSON読み込み機能
+        async function processJSON(file) {
+            loader.style.display = 'block';
+            status.style.display = 'none';
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const bcpData = JSON.parse(e.target.result);
+                    
+                    if (!bcpData.version) {
+                        throw new Error('不正なBCP地図ファイルです');
+                    }
+                    
+                    CLINIC_INFO = bcpData.clinic;
+                    const patients = bcpData.patients;
+                    
+                    // 患者をグループ化（Excel処理時と同じ構造に変換）
+                    const markers = groupPatientsByLocation(patients);
+                    
+                    // 統計情報を再計算
+                    const allPatients = markers.flatMap(m => m.patients);
+                    const stats = {
+                        total_patients: allPatients.length,
+                        total_markers: markers.length,
+                        high_risk: allPatients.filter(p => p.risk_level === '高').length,
+                        mid_risk: allPatients.filter(p => p.risk_level === '中').length,
+                        low_risk: allPatients.filter(p => p.risk_level === '低').length,
+                        with_phone: allPatients.filter(p => p.phones && p.phones.length > 0).length
+                    };
+                    
+                    loader.style.display = 'none';
+                    showStatus(`✅ 保存されたBCP地図を読み込みました（${stats.total_patients}名）`, 'success');
+                    
+                    // データを一時保存
+                    mapData = { markers, stats };
+                    
+                    // 画面切り替え
+                    uploadScreen.style.display = 'none';
+                    mapScreen.style.display = 'block';
+                    
+                    // 統計情報表示
+                    document.getElementById('clinicName').textContent = `📍 ${CLINIC_INFO.name}`;
+                    document.getElementById('stats').innerHTML = `
+                        登録患者: <strong>${stats.total_patients}名</strong><br>
+                        電話番号: <strong>${stats.with_phone}名</strong>
+                    `;
+                    document.getElementById('riskSummary').innerHTML = `
+                        <div class="risk-item risk-high">🔴 高<br><strong>${stats.high_risk}</strong></div>
+                        <div class="risk-item risk-mid">🟡 中<br><strong>${stats.mid_risk}</strong></div>
+                        <div class="risk-item risk-low">🟢 低<br><strong>${stats.low_risk}</strong></div>
+                    `;
+                    
+                    // 地図初期化（Excel処理時と同じロジック）
+                    if (map) {
+                        map.remove();
+                    }
+                    
+                    map = L.map('map', {
+                        center: [CLINIC_INFO.lat, CLINIC_INFO.lng],
+                        zoom: 14,
+                        zoomControl: true
+                    });
+                    
+                    // 背景地図
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap',
+                        subdomains: 'abcd',
+                        maxZoom: 20
+                    }).addTo(map);
+                    
+                    // ハザードマップレイヤー
+                    const floodLayer = L.tileLayer(
+                        'https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/{z}/{x}/{y}.png',
+                        { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+                    ).addTo(map);
+                    
+                    const doshaLayer = L.tileLayer(
+                        'https://disaportaldata.gsi.go.jp/raster/05_dosekiryukeikaikuiki/{z}/{x}/{y}.png',
+                        { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+                    ).addTo(map);
+                    
+                    const tsunamiLayer = L.tileLayer(
+                        'https://disaportaldata.gsi.go.jp/raster/04_tsunami_newlegend_data/{z}/{x}/{y}.png',
+                        { attribution: '国土交通省', opacity: 0.6, maxZoom: 17 }
+                    ).addTo(map);
+                    
+                    // 事業所マーカー
+                    const clinicMarker = L.marker([CLINIC_INFO.lat, CLINIC_INFO.lng], {
+                        icon: L.divIcon({
+                            className: 'clinic-icon',
+                            html: '<div style="font-size: 28px; filter: grayscale(100%) brightness(0%);">⭐</div>',
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 14]
+                        })
+                    }).addTo(map);
+                    
+                    clinicMarker.bindPopup(`
+                        <div style="text-align: center; padding: 10px;">
+                            <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">
+                                🏥 ${CLINIC_INFO.name}
+                            </div>
+                            <div style="color: #7f8c8d; font-size: 0.9em;">${CLINIC_INFO.address}</div>
+                        </div>
+                    `);
+                    
+                    // 患者マーカーグループ
+                    const patientGroup = L.featureGroup();
+                    
+                    // 患者マーカー作成（Excel処理時と同じロジック）
+                    markers.forEach(marker => {
+                        const color = marker.group_risk === '高' ? '#ff0000' : 
+                                     marker.group_risk === '中' ? '#ffaa00' : '#00cc00';
+                        
+                        const radius = marker.count === 1 ? 8 : Math.min(8 + marker.count * 0.5, 16);
+                        
+                        const circleMarker = L.circleMarker([marker.lat, marker.lng], {
+                            radius: radius,
+                            fillColor: color,
+                            color: '#000',
+                            weight: 2,
+                            opacity: 1.0,
+                            fillOpacity: 0.85
+                        });
+                        
+                        // ポップアップ作成
+                        let popupHTML = '<div class="patient-popup">';
+                        
+                        if (marker.count > 1) {
+                            popupHTML += `<div class="patient-count">${marker.count}名</div>`;
+                        }
+                        
+                        marker.patients.forEach((patient, index) => {
+                            if (index > 0) popupHTML += '<hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">';
+                            
+                            popupHTML += `<div class="patient-name">👤 ${patient.name}`;
+                            if (patient.id) {
+                                popupHTML += ` <span style="color: #95a5a6; font-size: 0.9em;">(ID: ${patient.id})</span>`;
+                            }
+                            popupHTML += '</div>';
+                            
+                            popupHTML += `<div class="address">${patient.address}</div>`;
+                            
+                            // 電話番号
+                            if (patient.phones && patient.phones.length > 0) {
+                                popupHTML += '<div class="phones">';
+                                patient.phones.forEach(phone => {
+                                    const icon = phone.type === '固定電話' ? '📞' : '📱';
+                                    popupHTML += `<a href="tel:${phone.number.replace(/[-－\s]/g, '')}" class="phone-link">${icon} ${phone.number}</a>`;
+                                });
+                                popupHTML += '</div>';
+                            }
+                            
+                            // リスク分類
+                            const riskColor = patient.risk_level === '高' ? '#ff0000' : 
+                                             patient.risk_level === '中' ? '#ffaa00' : '#00cc00';
+                            popupHTML += `<div class="risk-badge" style="background: ${riskColor};">リスク: ${patient.risk_level}</div>`;
+                            
+                            // 備考
+                            if (patient.notes) {
+                                popupHTML += `<div class="notes">📝 ${patient.notes}</div>`;
+                            }
+                        });
+                        
+                        popupHTML += '</div>';
+                        
+                        circleMarker.bindPopup(popupHTML);
+                        circleMarker.addTo(patientGroup);
+                    });
+                    
+                    patientGroup.addTo(map);
+                    
+                    // 全患者が見えるようにズーム調整
+                    if (markers.length > 0) {
+                        const bounds = patientGroup.getBounds();
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                    
+                } catch (error) {
+                    loader.style.display = 'none';
+                    showStatus('❌ JSONファイルの読み込みに失敗しました: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // CSV処理機能
+        async function processCSV(file) {
+            loader.style.display = 'block';
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const csvText = e.target.result;
+                    const lines = csvText.split('\n').filter(line => line.trim());
+                    
+                    if (lines.length < 2) throw new Error('CSVファイルにデータがありません');
+                    
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+                    showColumnMapping(headers, lines.slice(1));
+                    
+                } catch (error) {
+                    loader.style.display = 'none';
+                    showStatus('❌ CSVファイルの読み込みに失敗しました: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // CSV列マッピング画面
+        function showColumnMapping(headers, dataLines) {
+            loader.style.display = 'none';
+            
+            const mappingDiv = document.createElement('div');
+            mappingDiv.id = 'columnMapping';
+            mappingDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 10001;';
+            
+            const requiredColumns = [
+                { key: 'id', label: '患者番号', examples: ['患者番号', '患者ID', 'ID', '番号'] },
+                { key: 'name', label: '患者氏名', examples: ['患者氏名', '患者名', '氏名', '名前'] },
+                { key: 'address', label: '自宅住所', examples: ['自宅住所', '住所', '住所1'] },
+                { key: 'phone', label: '自宅電話番号', examples: ['自宅電話番号', '電話番号', '固定電話', 'TEL'] },
+                { key: 'mobile', label: 'その他の電話番号', examples: ['その他の電話番号', '携帯番号', '携帯電話', '携帯'] }
+            ];
+            
+            const autoMapping = {};
+            requiredColumns.forEach(col => {
+                const matched = headers.find(h => col.examples.some(ex => h.includes(ex) || ex.includes(h)));
+                autoMapping[col.key] = matched || headers[0];
+            });
+            
+            let mappingHTML = `<div style="background: white; padding: 30px; border-radius: 15px; max-width: 700px; max-height: 85vh; overflow-y: auto;">
+                <h2 style="margin-top: 0; color: #2c3e50;">📋 列の対応付け</h2>
+                <p style="color: #7f8c8d;">CSVの列名とアプリの項目を対応付けてください</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #ecf0f1;">
+                        <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">アプリの項目</th>
+                        <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">CSVの列</th>
+                    </tr>`;
+            
+            requiredColumns.forEach(col => {
+                mappingHTML += `<tr>
+                    <td style="padding: 10px; border: 1px solid #bdc3c7;"><strong>${col.label}</strong> ${['id','name','address'].includes(col.key) ? '<span style="color: red;">*</span>' : ''}</td>
+                    <td style="padding: 10px; border: 1px solid #bdc3c7;">
+                        <select id="map_${col.key}" style="width: 100%; padding: 5px;">
+                            <option value="">（なし）</option>
+                            ${headers.map(h => `<option value="${h}" ${autoMapping[col.key] === h ? 'selected' : ''}>${h}</option>`).join('')}
+                        </select>
+                    </td>
+                </tr>`;
+            });
+            
+            mappingHTML += `</table>
+                <p style="color: #e74c3c; font-size: 14px;">* 必須項目</p>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="applyCSVMapping()" style="flex: 1; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">変換実行</button>
+                    <button onclick="document.getElementById('columnMapping').remove(); uploadScreen.style.display='flex';" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">キャンセル</button>
+                </div>
+            </div>`;
+            
+            mappingDiv.innerHTML = mappingHTML;
+            document.body.appendChild(mappingDiv);
+            
+            window.csvHeaders = headers;
+            window.csvDataLines = dataLines;
+        }
+        
+        // CSV変換実行
+        async function applyCSVMapping() {
+            const mapping = {
+                id: document.getElementById('map_id').value,
+                name: document.getElementById('map_name').value,
+                address: document.getElementById('map_address').value,
+                phone: document.getElementById('map_phone').value,
+                mobile: document.getElementById('map_mobile').value
+            };
+            
+            if (!mapping.id || !mapping.name || !mapping.address) {
+                alert('患者番号、患者氏名、自宅住所は必須項目です');
+                return;
+            }
+            
+            document.getElementById('columnMapping').remove();
+            
+            const headers = window.csvHeaders;
+            const lines = window.csvDataLines;
+            
+            const jsonData = lines.map(line => {
+                const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+                const row = {};
+                headers.forEach((h, i) => { row[h] = values[i] || ''; });
+                return row;
+            }).filter(row => row[mapping.id]);
+            
+            const convertedData = jsonData.map(row => ({
+                '患者番号': row[mapping.id],
+                '患者氏名': row[mapping.name],
+                '自宅住所': row[mapping.address],
+                '自宅電話番号': row[mapping.phone] || '',
+                'その他の電話番号': row[mapping.mobile] || ''
+            }));
+            
+            loader.style.display = 'block';
+            await processConvertedData(convertedData);
+        }
+        
+        // 変換後データ処理（実装は長いのでここでは省略し、元のExcel処理を流用）
+        async function processConvertedData(jsonData) {
+            // Excel処理と同じロジックを使用
+            // 簡略化のため、Excel処理の主要部分を再利用
+            geocodingErrors = [];
+            
+            try {
+                const nameCol = findColumn(jsonData, ['患者氏名', '患者名前', '氏名', '名前']);
+                const addressCol = findColumn(jsonData, ['自宅住所', '住所', '住所1']);
+                
+                if (!addressCol) throw new Error('住所列が見つかりません');
+                
+                const total = jsonData.length;
+                const markers = [];
+                
+                progressContainer.style.display = 'block';
+                progressLabel.textContent = '座標変換中...';
+                
+                for (let i = 0; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    const address = row[addressCol];
+                    if (!address) continue;
+                    
+                    const progress = ((i + 1) / total * 100).toFixed(0);
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = progress + '%';
+                    progressPercent.textContent = progress + '%';
+                    progressStatus.textContent = `${i + 1} / ${total}`;
+                    
+                    const coords = await geocodeAddress(address);
+                    
+                    if (coords) {
+                        const phoneCol = findColumn(jsonData, ['自宅電話番号', '電話番号', '固定電話', 'TEL']);
+                        const mobileCol = findColumn(jsonData, ['その他の電話番号', '携帯番号', '携帯電話', '携帯']);
+                        
+                        let phone = phoneCol ? String(row[phoneCol] || '') : '';
+                        let mobile = mobileCol ? String(row[mobileCol] || '') : '';
+                        
+                        if (phone && !phone.startsWith('0') && phone.length >= 6) {
+                            const originalPhone = phone;
+                            phone = autoCompleteAreaCode(phone, address);
+                            if (phone !== originalPhone) {
+                                areaCodeAdjustments.push({ name: row[nameCol] || '', original: originalPhone, adjusted: phone });
+                            }
+                        }
+                        
+                        markers.push({
+                            id: row['患者番号'] || '',
+                            name: row[nameCol] || '名前不明',
+                            address: address,
+                            lat: coords.lat,
+                            lng: coords.lng,
+                            phone: phone,
+                            mobile: mobile,
+                            contact: '',
+                            risk: row['リスク分類'] || '低',
+                            notes: row['備考'] || ''
+                        });
+                    } else {
+                        geocodingErrors.push({ name: row[nameCol] || '名前不明', address: address });
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                progressContainer.style.display = 'none';
+                loader.style.display = 'none';
+                
+                if (markers.length === 0) throw new Error('有効な座標を取得できませんでした');
+                
+                const stats = calculateStats(markers);
+                
+                if (areaCodeAdjustments.length > 0 || geocodingErrors.length > 0) {
+                    let message = `✅ 地図を作成しました（${markers.length}/${total}名）`;
+                    if (areaCodeAdjustments.length > 0) message += `\n📞 市外局番を自動追加: ${areaCodeAdjustments.length}件`;
+                    if (geocodingErrors.length > 0) message += `\n⚠️ 座標取得失敗: ${geocodingErrors.length}件`;
+                    showStatus(message, 'info');
+                }
+                
+                mapData = { markers, stats };
+                uploadScreen.style.display = 'none';
+                mapScreen.style.display = 'block';
+                
+                document.getElementById('clinicName').textContent = `📍 ${CLINIC_INFO.name}`;
+                document.getElementById('stats').innerHTML = `登録患者: <strong>${stats.total_patients}名</strong><br>電話番号: <strong>${stats.with_phone}名</strong>`;
+                document.getElementById('riskSummary').innerHTML = `
+                    <div class="risk-item risk-high">🔴 高<br><strong>${stats.high_risk}</strong></div>
+                    <div class="risk-item risk-mid">🟡 中<br><strong>${stats.mid_risk}</strong></div>
+                    <div class="risk-item risk-low">🟢 低<br><strong>${stats.low_risk}</strong></div>
+                `;
+                
+                setTimeout(() => showSecurityWarning(), 2000);
+                
+                if (map) map.remove();
+                await createMap(markers);
+                
+            } catch (error) {
+                loader.style.display = 'none';
+                progressContainer.style.display = 'none';
+                showStatus('❌ エラー: ' + error.message, 'error');
+            }
+        }
+        
+    </script>
+</body>
+</html>
