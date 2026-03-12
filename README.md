@@ -10,7 +10,7 @@
 
 <div align="center">
 
- <img src="アプリ用QRコード_最終版.png" width="256" alt="アプリQRコード">
+![アプリ用QRコード](アプリ用QRコード_最終版.png)
 
 </div>
 
