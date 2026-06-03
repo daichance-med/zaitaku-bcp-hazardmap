@@ -21,8 +21,25 @@
 
 > ⚠️ iOSユーザーの方へ：ローカルHTMLファイルをそのまま開くと動作しない場合があります。上記QRコードまたはURLからアクセスしてください。
 
+
 ---
 
+## 📱 紹介リール動画（Instagram）
+
+<div align="center">
+
+| 患者安否確認アプリ 紹介動画 |
+|:---:|
+
+
+| ![Reel QR](IMG_20260603_222735_901.png) |
+
+
+
+
+| [@daichance.med](https://www.instagram.com/daichance.med/) |
+
+</div>
 ## ✨ 主な機能
 
 - **📍 患者住所の自動地図化** - 国土地理院APIで高精度な位置標定
