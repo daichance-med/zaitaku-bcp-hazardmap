@@ -37,7 +37,7 @@
 
 
 
-| [@daichance.med](https://www.instagram.com/daichance.med/) |
+ [@daichance.med](https://www.instagram.com/daichance.med/) 
 
 </div>
 ## ✨ 主な機能
