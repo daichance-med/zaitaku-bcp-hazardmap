@@ -32,7 +32,7 @@
 |:---:|
 
 
-| ![Reel QR](IMG_20260603_222735_901.png) |
+ ![Reel QR](IMG_20260603_222735_901.png) 
 
 [@daichance.med](https://www.instagram.com/daichance.med/) 
 
